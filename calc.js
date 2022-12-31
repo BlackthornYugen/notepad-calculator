@@ -31,12 +31,7 @@ $(document).ready(function () {
 	var $inputArea = $('#inputArea'),
 		$outputArea = $('#outputArea');
 
-	var binaryOperators = {
-		'+': function (a, b) {return a + b;},
-		'-': function (a, b) {return a - b;},
-		'/': function (a, b) {return a / b;},
-		'*': function (a, b) {return a * b;}
-	};
+	var binaryOperators = /^[\+\-\*\/]/
 		
 	var previousAnswerLines = []; // keep copy of old answers to see what changed
 
@@ -57,23 +52,24 @@ $(document).ready(function () {
 			try {
 				// remove all comment lines
 				if (line[0] && line[0] === "#") {
-					line = "";
+					return;
 				}
 
 				if (line.length > 0) {
           // If the line starts with an operator (+, -, *, /), prepend the previous answer
-					if (binaryOperators[line[0]] && outputLines[previousAnswerIndex]) {
-						line = outputLines[previousAnswerIndex] + line;
+					if (binaryOperators.test(line[0]) && outputLines[previousAnswerIndex]) {
+						line = "ans " + line;
 					}
 
-          // Allow user to use 'ans' to refer to previous answer
-					if (outputLines[previousAnswerIndex]) {
-						line = "ans=" + outputLines[previousAnswerIndex] + ";" + line;
+					var answer = math.evaluate(line, context);
+
+					if (answer instanceof math.Unit) {
+						answer = answer.value
 					}
-					var answer = math.evaluate(line); // jshint ignore:line
 
 					if (typeof(answer) === "number") {
 						outputLines[i] = Math.round(answer * 10000) / 10000;
+						context["ans"] = answer;
 					}
 					
 					previousAnswerIndex = i;
