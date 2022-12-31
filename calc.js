@@ -52,7 +52,7 @@ $(document).ready(function () {
 
 		var previousAnswerIndex;
 
-    // Calculate answers using eval()
+    // Calculate answers using math.evaluate()
 		$.each(lines, function (i, line) {
 			try {
 				// remove all comment lines
@@ -70,7 +70,7 @@ $(document).ready(function () {
 					if (outputLines[previousAnswerIndex]) {
 						line = "ans=" + outputLines[previousAnswerIndex] + ";" + line;
 					}
-					var answer = eval(line); // jshint ignore:line
+					var answer = math.evaluate(line); // jshint ignore:line
 
 					if (typeof(answer) === "number") {
 						outputLines[i] = Math.round(answer * 10000) / 10000;
