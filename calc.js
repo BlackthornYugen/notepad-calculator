@@ -32,7 +32,7 @@ $(document).ready(function () {
 		"Conversions\n" +
 		"-------------------\n" +
 		"\n" +
-		"12 cm to inchs\n" +
+		"12 cm to inches\n" +
 		"2 litres to cups\n" +
 		"1000 sqyard in hectares\n" +
 		"5000 watts to hp\n" +
