@@ -94,16 +94,17 @@ $(document).ready(function () {
 		});
 
 		var rows = [];
+		var DECIMAL_PERCISION = 4;
 		$.each(outputLines, function (index, line) {
 			var row;
 			if (line instanceof math.Unit || typeof(line) === "number") {
-				row = math.format(line, 4)
+				row = math.format(line, DECIMAL_PERCISION)
 			} else {
 				row = '&nbsp;';
 			}
 
       // add "changed" class to highlight the new and changed answers since last calculation
-			if (!previousAnswerLines || previousAnswerLines[index] !== outputLines[index]) {
+			if (!previousAnswerLines || math.format(previousAnswerLines[index], DECIMAL_PERCISION) !== row) {
 				row = '<span class="changed">' + row + '</span>';
 			}
 			rows.push('<li>' + row + '</li>');
@@ -133,7 +134,7 @@ $(document).ready(function () {
 	try {
 		hashContent = atob(window.location.hash.substring(1));
 	} catch {
-		// ignore
+		window.location.hash = $inputArea.val()
 	}
 
 	if (hashContent || initialString) {
