@@ -1,5 +1,39 @@
 // Note: can't use "strict mode" since we need to eval() non-strict code from the user
 
+
+var hashEventListener = function() {
+	$inputArea = $('#inputArea');
+	if (btoa($inputArea.val()) !== window.location.hash) {
+		$inputArea.val(loadData($inputArea));
+		$inputArea.trigger('properychange')
+	}
+}
+
+var saveData = function($inputArea) {
+	if (window.location.hash || /#$/.test(window.location.href)) {
+		// Only update hash when a hashtag is present
+		window.location.hash = btoa($inputArea.val());
+	} else {
+		// Fallback to local storage when there isn't a hashtag
+		localStorage.setItem('notePadValue', $inputArea.val());
+	}
+}
+
+var loadData = function($inputArea) {
+	var localContent = localStorage.getItem('notePadValue');
+	var hashContent = null;
+	
+	try {
+		hashContent = atob(window.location.hash.substring(1));
+	} catch {
+		window.location.hash = btoa($inputArea.val())
+	}
+
+	return hashContent || localContent;
+}
+
+addEventListener('hashchange', hashEventListener);
+
 $(document).ready(function () {
 	var $ = window.$;
 
@@ -48,13 +82,7 @@ $(document).ready(function () {
 
 	var calculateAnswers = function () {
 		if (!introPlaying) {
-			if (window.location.hash || /#$/.test(window.location.href)) {
-				// Only update hash when a hashtag is present
-				window.location.hash = btoa($inputArea.val())
-			} else {
-				// Fallback to local storage when there isn't a hashtag
-				localStorage.setItem('notePadValue', $inputArea.val());
-			}
+			saveData($inputArea);
 		}
 
 		var lines = $inputArea.val().split('\n');
@@ -130,17 +158,10 @@ $(document).ready(function () {
 	$inputArea.bind('input properychange', calculateAnswers);
 	
   // fetch initial calculations from localStorage
-	var initialString = localStorage.getItem('notePadValue');
-	var hashContent = null;
-	
-	try {
-		hashContent = atob(window.location.hash.substring(1));
-	} catch {
-		window.location.hash = $inputArea.val()
-	}
+	var initialString = loadData($inputArea);
 
-	if (hashContent || initialString) {
-		$inputArea.val(hashContent || initialString);
+	if (initialString) {
+		$inputArea.val(initialString);
 		calculateAnswers();
 		$inputArea.focus();
 	} else {
@@ -177,4 +198,3 @@ $(document).ready(function () {
 		printInitialLines();
 	}
 });
-
