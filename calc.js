@@ -48,9 +48,11 @@ $(document).ready(function () {
 
 	var calculateAnswers = function () {
 		if (!introPlaying) {
-			if (window.location.hash) {
+			if (window.location.hash || /#$/.test(window.location.href)) {
+				// Only update hash when a hashtag is present
 				window.location.hash = btoa($inputArea.val())
 			} else {
+				// Fallback to local storage when there isn't a hashtag
 				localStorage.setItem('notePadValue', $inputArea.val());
 			}
 		}
