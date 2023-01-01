@@ -26,7 +26,18 @@ $(document).ready(function () {
 		"costPerCarton = eggsPerCarton * costPerEgg\n" +
 		"numberOfCartons = 60\n" +
 		"\n" +
-		"totalCost = costPerCarton * numberOfCartons\n";
+		"totalCost = costPerCarton * numberOfCartons\n" +
+		"\n" +
+		"\n" +
+		"Conversions\n" +
+		"-------------------\n" +
+		"\n" +
+		"12 cm to inchs\n" +
+		"2 litres to cups\n" +
+		"1000 sqyard in hectares\n" +
+		"5000 watts to hp\n" +
+		"30 BTU in Wh\n" +
+		"3 decades in minutes";
 
 	var $inputArea = $('#inputArea'),
 		$outputArea = $('#outputArea');
