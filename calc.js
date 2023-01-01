@@ -1,5 +1,7 @@
 // Note: can't use "strict mode" since we need to eval() non-strict code from the user
 
+var rowPattern = /^(?<leadingOperation>[\+\-\*\/])?(?<expression>.*?)(#.*(?<type>hex|oct|bin))?$/i
+var saveDataTimeout = 0;
 
 var hashEventListener = function() {
 	$inputArea = $('#inputArea');
@@ -10,18 +12,23 @@ var hashEventListener = function() {
 	}
 }
 
-var saveData = function($inputArea) {
+var saveData = function($inputArea, delayTime) {
+	// Only update hash when a hashtag is present
 	if (window.location.hash || /#$/.test(window.location.href)) {
-		// Only update hash when a hashtag is present
-		var rawBytes = Uint8Array.from($inputArea.val(), c => c.charCodeAt(0));
-		var compressedBytes = pako.deflate(rawBytes);
-		var encoded = null;
-		if (rawBytes.length < (compressedBytes.length + 15)) {
-			encoded = btoa(String.fromCharCode.apply(null, rawBytes));
-		} else {
-			encoded = "zlib=" + btoa(String.fromCharCode.apply(null, compressedBytes));
-		}
-		window.location.hash = encoded;
+		// Save is done after a given delay. If a save is pending, push it back to <delayTime>.
+		clearTimeout(saveDataTimeout);
+		saveDataTimeout = setTimeout(() => {
+			var rawBytes = Uint8Array.from($inputArea.val(), c => c.charCodeAt(0));
+			var compressedBytes = pako.deflate(rawBytes);
+			var encoded = null;
+			if (rawBytes.length < (compressedBytes.length + 15)) {
+				encoded = btoa(String.fromCharCode.apply(null, rawBytes));
+			} else {
+				encoded = "gzip=" + btoa(String.fromCharCode.apply(null, compressedBytes));
+			}
+			window.location.hash = encoded;
+			console.log(encoded)
+		}, delayTime || 0)
 	} else {
 		// Fallback to local storage when there isn't a hashtag
 		localStorage.setItem('notePadValue', $inputArea.val());
@@ -34,10 +41,16 @@ var loadData = function($inputArea) {
 	
 	try {
 		hashContent = window.location.hash.substring(1);
-		if (hashContent.startsWith("zlib=")) {
-			hashContent = String.fromCharCode.apply(null, pako.inflate(Uint8Array.from(atob(hashContent.replace("zlib=","")), c => c.charCodeAt(0))));
+		if (hashContent.startsWith("gzip=")) {
+			hashContent = String.fromCharCode.apply(null, pako.inflate(Uint8Array.from(atob(hashContent.replace("gzip=","")), c => c.charCodeAt(0))));
+		} else if (hashContent.startsWith("b64=")) {
+			hashContent = String.fromCharCode.apply(null, pako.inflate(Uint8Array.from(atob(hashContent.replace("gzip=","")), c => c.charCodeAt(0))));
 		} else {
 			hashContent = atob(hashContent);
+		}
+
+		if (hashContent.trim().length <= 1) {
+			hashContent = null;
 		}
 	} catch {
 		window.location.hash = btoa($inputArea.val())
@@ -85,18 +98,25 @@ $(document).ready(function () {
 		"1000 sqyard in hectares\n" +
 		"5000 watts to hp\n" +
 		"30 BTU in Wh\n" +
-		"3 decades in minutes";
+		"3 decades in minutes\n" + 
+		"\n" +
+		"\n" +
+		"Number Formats\n" +
+		"-------------------\n" +
+		"\n" +
+		"255 #hex\n" +
+		"255 #oct\n" +
+		"255 #bin\n";
 
 	var $inputArea = $('#inputArea'),
 		$outputArea = $('#outputArea');
 
-	var binaryOperators = /^[\+\-\*\/]/
-		
 	var previousAnswerLines = []; // keep copy of old answers to see what changed
 
 	var calculateAnswers = function () {
 		if (!introPlaying) {
-			saveData($inputArea);
+			// Save data in the next 3 seconds on change
+			saveData($inputArea, 3000);
 		}
 
 		var lines = $inputArea.val().split('\n');
@@ -109,20 +129,21 @@ $(document).ready(function () {
     // Calculate answers using math.evaluate()
 		$.each(lines, function (i, line) {
 			try {
-				// remove all comment lines
-				if (line[0] && line[0] === "#") {
-					return;
-				}
+				lineData = rowPattern.exec(line).groups;
 
 				if (line.length > 0) {
           // If the line starts with an operator (+, -, *, /), prepend the previous answer
-					if (binaryOperators.test(line[0]) && outputLines[previousAnswerIndex]) {
-						line = "ans " + line;
+					if (lineData.leadingOperation && outputLines[previousAnswerIndex]) {
+						lineData.expression = "ans " + lineData.leadingOperation + lineData.expression;
 					}
 
-					var answer = math.evaluate(line, context);
+					if (lineData.type) {
+						lineData.expression = 'format(' + lineData.expression + ', {notation: "' + lineData.type.toLowerCase() + '"})';
+					}
 
-					if (typeof(answer) === "number" || answer instanceof math.Unit) {
+					var answer = math.evaluate(lineData.expression, context);
+
+					if (typeof(answer) === "number" || typeof(answer) === "string" || answer instanceof math.Unit) {
 						outputLines[i] = answer;
 					}
 
@@ -143,6 +164,8 @@ $(document).ready(function () {
 			var row;
 			if (line instanceof math.Unit || typeof(line) === "number") {
 				row = math.format(line, DECIMAL_PERCISION)
+			} else if (typeof(line) === "string") {
+				row = line;
 			} else {
 				row = '&nbsp;';
 			}
@@ -168,8 +191,9 @@ $(document).ready(function () {
 		rulerLines.push('<li>&nbsp;</li>');
 	}
 	$('.backgroundRuler').html(rulerLines.join(''));
-
-	$inputArea.bind('input properychange', calculateAnswers);
+	
+	$inputArea.on('input properychange', calculateAnswers);
+	$inputArea.blur(() => saveData($inputArea, 0)); // save immediatly on focus lost
 	
   // fetch initial calculations from localStorage
 	var initialString = loadData($inputArea);
