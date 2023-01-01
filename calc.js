@@ -3,8 +3,9 @@
 
 var hashEventListener = function() {
 	$inputArea = $('#inputArea');
-	if (btoa($inputArea.val()) !== window.location.hash) {
-		$inputArea.val(loadData($inputArea));
+	var dataFromHash = loadData($inputArea);
+	if ($inputArea.val() !== dataFromHash) {
+		$inputArea.val(dataFromHash);
 		$inputArea.trigger('properychange')
 	}
 }
@@ -12,7 +13,15 @@ var hashEventListener = function() {
 var saveData = function($inputArea) {
 	if (window.location.hash || /#$/.test(window.location.href)) {
 		// Only update hash when a hashtag is present
-		window.location.hash = btoa($inputArea.val());
+		var rawBytes = Uint8Array.from($inputArea.val(), c => c.charCodeAt(0));
+		var compressedBytes = pako.deflate(rawBytes);
+		var encoded = null;
+		if (rawBytes.length < (compressedBytes.length + 15)) {
+			encoded = btoa(String.fromCharCode.apply(null, rawBytes));
+		} else {
+			encoded = "zlib=" + btoa(String.fromCharCode.apply(null, compressedBytes));
+		}
+		window.location.hash = encoded;
 	} else {
 		// Fallback to local storage when there isn't a hashtag
 		localStorage.setItem('notePadValue', $inputArea.val());
@@ -24,7 +33,12 @@ var loadData = function($inputArea) {
 	var hashContent = null;
 	
 	try {
-		hashContent = atob(window.location.hash.substring(1));
+		hashContent = window.location.hash.substring(1);
+		if (hashContent.startsWith("zlib=")) {
+			hashContent = String.fromCharCode.apply(null, pako.inflate(Uint8Array.from(atob(hashContent.replace("zlib=","")), c => c.charCodeAt(0))));
+		} else {
+			hashContent = atob(hashContent);
+		}
 	} catch {
 		window.location.hash = btoa($inputArea.val())
 	}
