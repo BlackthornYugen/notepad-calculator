@@ -64,7 +64,7 @@ $(document).ready(function () {
 					var answer = math.evaluate(line, context);
 
 					if (answer instanceof math.Unit) {
-						answer = answer.value
+						answer = answer.toNumber()
 					}
 
 					if (typeof(answer) === "number") {
