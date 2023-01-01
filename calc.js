@@ -48,7 +48,11 @@ $(document).ready(function () {
 
 	var calculateAnswers = function () {
 		if (!introPlaying) {
-			localStorage.setItem('notePadValue', $inputArea.val());
+			if (window.location.hash) {
+				window.location.hash = btoa($inputArea.val())
+			} else {
+				localStorage.setItem('notePadValue', $inputArea.val());
+			}
 		}
 
 		var lines = $inputArea.val().split('\n');
@@ -124,8 +128,16 @@ $(document).ready(function () {
 	
   // fetch initial calculations from localStorage
 	var initialString = localStorage.getItem('notePadValue');
-	if (initialString) {
-		$inputArea.val(initialString);
+	var hashContent = null;
+	
+	try {
+		hashContent = atob(window.location.hash.substring(1));
+	} catch {
+		// ignore
+	}
+
+	if (hashContent || initialString) {
+		$inputArea.val(hashContent || initialString);
 		calculateAnswers();
 		$inputArea.focus();
 	} else {
